@@ -1,4 +1,21 @@
-Implemented own authentication flow like next-auth with own custom middleware but simpler and straight forward approach because I was too bored to read the next-auth documentation. [Btw ignore that sqlite.db file in the repo :)]
+Implemented own authentication flow like next-auth but simpler and straight forward approach. Used Drizzle ORM with Sqlite for database handling because I was too bored to read the next-auth documentation. [Btw ignore that sqlite.db file in the repo :)]
+
+## own-auth
+
+You can find my own-auth inside:
+
+```
+.
+└── src/
+    └── lib/
+        └── own-auth/
+```
+
+## Technologies
+
+- Nextjs (App router)
+- Sqlite
+- Drizzle ORM
 
 ## Getting Started
 
