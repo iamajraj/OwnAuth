@@ -1,28 +1,8 @@
 import { randomUUID } from "crypto";
-import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
-
-type SESSION_T = {
-  email: string;
-};
-
-type USER_T = {
-  email: string;
-  password: string;
-};
-
-let AUTH_SESSIONS: Record<string, SESSION_T> = {
-  abc: {
-    email: "akmalraj07@gmail.com",
-  },
-};
-
-let USERS: Record<string, USER_T> = {
-  "akmalraj07@gmail.com": {
-    email: "akmalraj07@gmail.com",
-    password: "123",
-  },
-};
+import { db } from "../db";
+import { session, user, USER } from "../db/schema";
+import { eq } from "drizzle-orm";
 
 export default async function handleAuth(
   req: NextRequest,
@@ -33,39 +13,66 @@ export default async function handleAuth(
       ownAuth: [type, ...rest],
     },
   } = params;
-
-  if (req.method === "POST") {
-    switch (type) {
-      case "login":
-        return await authLogin(req);
-      case "signup":
-        return await authSignup(req);
-      default:
-        return NextResponse.json({
-          message: "Invalid request",
-        });
+  try {
+    if (req.method === "POST") {
+      switch (type) {
+        case "login":
+          return await authLogin(req);
+        case "signup":
+          return await authSignup(req);
+        default:
+          return NextResponse.json({
+            message: "Invalid request",
+          });
+      }
     }
-  }
 
-  if (req.method === "GET") {
-    switch (type) {
-      case "login":
-        return NextResponse.redirect(new URL("/login", req.nextUrl));
-      default:
-        return NextResponse.json({
-          message: "trying to get",
-        });
+    if (req.method === "GET") {
+      switch (type) {
+        case "login":
+          return NextResponse.redirect(new URL("/login", req.nextUrl));
+        case "user":
+          const searchParams = new URL(req.url).searchParams;
+          const sessionId = searchParams.get("sessionId");
+
+          if (!sessionId) {
+            return error("please provide userid and session id", 400);
+          }
+
+          const u_session = (
+            await db
+              .select()
+              .from(session)
+              .where(eq(session.sessionId, sessionId))
+          ).at(0);
+
+          if (!u_session?.userId) {
+            return error("invalid session id", 404);
+          }
+
+          const u_user = (
+            await db.select().from(user).where(eq(user.id, u_session.userId))
+          ).at(0);
+
+          return NextResponse.json({
+            user: u_user,
+            error: false,
+          });
+
+        default:
+          return NextResponse.json({
+            message: "trying to get",
+          });
+      }
     }
+  } catch (err) {
+    let err_t = err as Error;
+    return error(err_t.message, 500);
   }
 }
 
 async function authLogin(req: NextRequest) {
   try {
-    // let { email, password } = (await req.json()) as {
-    //   email: string;
-    //   password: string;
-    // };
-
     let fd = await req.formData();
     const email = fd.get("email")?.toString();
     const password = fd.get("password")?.toString();
@@ -77,17 +84,19 @@ async function authLogin(req: NextRequest) {
       throw new Error("Email or Password empty");
     }
 
-    if (!USERS[email]) {
+    const user = await db.query.user.findFirst({
+      where: (users, { eq }) => eq(users.email, email),
+    });
+
+    if (!user) {
       throw new Error("Email or Password is invalid.");
     }
-
-    const user = USERS[email];
 
     if (user.password !== password) {
       throw new Error("Email or Password is invalid.");
     }
 
-    const sessionId = createSession(user);
+    const sessionId = await createSession(user.id);
 
     // return new Response(
     //   JSON.stringify({
@@ -104,8 +113,7 @@ async function authLogin(req: NextRequest) {
     // );
     return NextResponse.redirect(new URL("/", req.nextUrl), {
       headers: {
-        // "Set-Cookie": `sessionId=${sessionId}`,
-        "Set-Cookie": `sessionId=abc; Path=/`,
+        "Set-Cookie": `sessionId=${sessionId}; Path=/`,
         "Content-Type": "application/json",
       },
     });
@@ -116,10 +124,14 @@ async function authLogin(req: NextRequest) {
 }
 async function authSignup(req: NextRequest) {
   try {
-    const { email, password } = (await req.json()) as {
-      email: string;
-      password: string;
-    };
+    // const { email, password } = (await req.json()) as {
+    //   email: string;
+    //   password: string;
+    // };
+
+    let fd = await req.formData();
+    const email = fd.get("email")?.toString();
+    const password = fd.get("password")?.toString();
 
     if (!email || !password) {
       throw new Error("Email or Password missing");
@@ -128,17 +140,29 @@ async function authSignup(req: NextRequest) {
       throw new Error("Email or Password empty");
     }
 
-    if (USERS[email]) {
+    const isUserExists = await db.query.user.findFirst({
+      where: (users, { eq }) => eq(users.email, email),
+    });
+
+    if (isUserExists) {
       throw new Error("Email already exists.");
     }
 
-    const user = {
-      email: email,
-      password: password,
-    };
-    USERS[email] = user;
+    const result = await db
+      .insert(user)
+      .values({
+        email: email,
+        password: password,
+      })
+      .returning({ id: user.id });
 
-    const sessionId = createSession(user);
+    if (result.length === 0) {
+      throw new Error("Failed to create account");
+    }
+
+    const created_user = result[0];
+
+    const sessionId = await createSession(created_user.id);
 
     return new Response(
       JSON.stringify({
@@ -147,7 +171,7 @@ async function authSignup(req: NextRequest) {
       {
         status: 201,
         headers: {
-          "Set-Cookie": `sessionId=${sessionId}`,
+          "Set-Cookie": `sessionId=${sessionId}; Path=/`,
           "Content-Type": "application/json",
         },
       }
@@ -158,37 +182,23 @@ async function authSignup(req: NextRequest) {
   }
 }
 
-export function ownAuthMiddleware(
-  callback?: (req: NextRequest, user: USER_T | null) => void
-) {
-  return (req: NextRequest) => {
-    const sessionId = cookies().get("sessionId")?.value;
-    let user = null;
-    if (sessionId) {
-      const session = findSession(sessionId);
-      if (session) {
-        user = USERS[session.email];
-      }
-    }
-
-    if (callback) {
-      return callback(req, user);
-    }
-  };
-}
-
 function error(msg: string, status: number = 400) {
   return NextResponse.json({ error: true, message: msg }, { status });
 }
 
-function findSession(sesId: string) {
-  return AUTH_SESSIONS[sesId];
-}
-
-function createSession(user: USER_T) {
+async function createSession(userId: number) {
   const sessionId = randomUUID();
-  AUTH_SESSIONS[sessionId] = {
-    email: user.email,
-  };
-  return sessionId;
+
+  const result = (
+    await db
+      .insert(session)
+      .values({
+        sessionId: sessionId,
+        userId: userId,
+        expiresAt: new Date().getTime() / 1000 + 2 * 60 * 60,
+      })
+      .returning()
+  ).at(0);
+
+  return result?.sessionId;
 }
