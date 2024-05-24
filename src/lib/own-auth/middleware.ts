@@ -10,7 +10,6 @@ export function ownAuthMiddleware(
 ) {
   return async (req: NextRequest) => {
     const sessionId = cookies().get("sessionId")?.value;
-    console.log("SES", sessionId);
     let user: null | USER = null;
     if (sessionId) {
       user = await getUser(sessionId);
