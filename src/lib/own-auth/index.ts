@@ -1,10 +1,11 @@
 import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "../db";
-import { session, user, USER } from "../db/schema";
+import { session, user } from "../db/schema";
 import { eq } from "drizzle-orm";
 
-const SESSION_EXPIRES_IN_SECONDS = 10;
+// 1 day = 60 * 60 * 24
+const SESSION_EXPIRES_IN_SECONDS = 60 * 60 * 24;
 
 export default async function handleAuth(
   req: NextRequest,
@@ -202,14 +203,10 @@ async function createSession(userId: number) {
       .values({
         sessionId: sessionId,
         userId: userId,
-        expiresAt: getExpiresTimeDate().getTime() / 1000,
+        expiresAt: (Date.now() + SESSION_EXPIRES_IN_SECONDS * 1000) / 1000,
       })
       .returning()
   ).at(0);
 
   return result?.sessionId;
-}
-
-function getExpiresTimeDate() {
-  return new Date(Date.now() + SESSION_EXPIRES_IN_SECONDS * 1000);
 }
