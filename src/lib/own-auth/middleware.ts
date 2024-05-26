@@ -16,10 +16,9 @@ export function ownAuthMiddleware(
     }
     if (callback) {
       const response = await callback(req, user);
-      // commented this code is because the cookie now has expires time, so it will automatically get deleted
-      // if (sessionId && !user) {
-      // response.headers.append("Set-Cookie", `sessionId=; Path=/; Max-Age=0;`);
-      // }
+      if (sessionId && !user) {
+        response.headers.append("Set-Cookie", `sessionId=; Path=/; Max-Age=0;`);
+      }
       return response;
     }
   };

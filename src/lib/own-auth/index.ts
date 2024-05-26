@@ -120,7 +120,7 @@ async function authLogin(req: NextRequest) {
     // );
     return NextResponse.redirect(new URL("/", req.nextUrl), {
       headers: {
-        "Set-Cookie": `sessionId=${sessionId}; Path=/; expires=${getExpiresTimeDate().toUTCString()};`,
+        "Set-Cookie": `sessionId=${sessionId}; Path=/;`,
         "Content-Type": "application/json",
       },
     });
@@ -178,7 +178,7 @@ async function authSignup(req: NextRequest) {
       {
         status: 201,
         headers: {
-          "Set-Cookie": `sessionId=${sessionId}; Path=/; expires=${getExpiresTimeDate().toUTCString()};`,
+          "Set-Cookie": `sessionId=${sessionId}; Path=/;`,
           "Content-Type": "application/json",
         },
       }
