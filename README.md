@@ -1,5 +1,7 @@
 Implemented own authentication flow like next-auth but simpler and straight forward approach. Used Drizzle ORM with Sqlite for database handling because I was too bored to read the next-auth documentation. [Btw ignore that sqlite.db file in the repo :)]
 
+##### *password encryption not added yet
+
 ## own-auth
 
 You can find my own-auth inside:
