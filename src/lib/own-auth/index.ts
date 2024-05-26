@@ -4,6 +4,8 @@ import { db } from "../db";
 import { session, user, USER } from "../db/schema";
 import { eq } from "drizzle-orm";
 
+const SESSION_EXPIRES_IN_SECONDS = 10;
+
 export default async function handleAuth(
   req: NextRequest,
   params: { params: { ownAuth: string[] } }
@@ -48,6 +50,11 @@ export default async function handleAuth(
 
           if (!u_session?.userId) {
             return error("invalid session id", 404);
+          }
+
+          if (u_session?.expiresAt < new Date().getTime() / 1000) {
+            await db.delete(session).where(eq(session.sessionId, sessionId));
+            return error("Session is expired", 400);
           }
 
           const u_user = (
@@ -113,7 +120,7 @@ async function authLogin(req: NextRequest) {
     // );
     return NextResponse.redirect(new URL("/", req.nextUrl), {
       headers: {
-        "Set-Cookie": `sessionId=${sessionId}; Path=/`,
+        "Set-Cookie": `sessionId=${sessionId}; Path=/; expires=${getExpiresTimeDate().toUTCString()};`,
         "Content-Type": "application/json",
       },
     });
@@ -171,7 +178,7 @@ async function authSignup(req: NextRequest) {
       {
         status: 201,
         headers: {
-          "Set-Cookie": `sessionId=${sessionId}; Path=/`,
+          "Set-Cookie": `sessionId=${sessionId}; Path=/; expires=${getExpiresTimeDate().toUTCString()};`,
           "Content-Type": "application/json",
         },
       }
@@ -195,10 +202,14 @@ async function createSession(userId: number) {
       .values({
         sessionId: sessionId,
         userId: userId,
-        expiresAt: new Date().getTime() / 1000 + 2 * 60 * 60,
+        expiresAt: getExpiresTimeDate().getTime() / 1000,
       })
       .returning()
   ).at(0);
 
   return result?.sessionId;
+}
+
+function getExpiresTimeDate() {
+  return new Date(Date.now() + SESSION_EXPIRES_IN_SECONDS * 1000);
 }

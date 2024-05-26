@@ -7,6 +7,6 @@ export default {
   strict: true,
   dialect: "sqlite",
   dbCredentials: {
-    url: "sqlite.db",
+    url: "mydb.db",
   },
 } satisfies Config;

@@ -12,7 +12,9 @@ export type USER = InferSelectModel<typeof user>;
 
 export const session = sqliteTable("sessions", {
   sessionId: text("session_id").primaryKey(),
-  userId: integer("user_id").references(() => user.id),
+  userId: integer("user_id").references(() => user.id, {
+    onDelete: "cascade",
+  }),
   expiresAt: integer("expires_at").notNull().default(0),
 });
 

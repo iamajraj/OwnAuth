@@ -4,7 +4,7 @@ import * as schema from "./schema";
 import path from "path";
 import { cwd } from "process";
 
-const sqlite = new Database(path.resolve(cwd(), "sqlite.db"), {
+const sqlite = new Database(path.resolve(cwd(), "mydb.db"), {
   fileMustExist: true,
 });
 export const db = drizzle(sqlite, {
