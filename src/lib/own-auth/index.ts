@@ -1,8 +1,8 @@
-import { randomUUID } from "crypto";
-import { NextRequest, NextResponse } from "next/server";
-import { db } from "../db";
-import { session, user } from "../db/schema";
-import { eq } from "drizzle-orm";
+import { randomUUID } from 'crypto';
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '../db';
+import { session, user } from '../db/schema';
+import { eq } from 'drizzle-orm';
 
 // 1 day = 60 * 60 * 24
 const SESSION_EXPIRES_IN_SECONDS = 60 * 60 * 24;
@@ -17,36 +17,42 @@ export default async function handleAuth(
     },
   } = params;
   try {
-    if (req.method === "POST") {
+    if (req.method === 'POST') {
       switch (type) {
-        case "login":
+        case 'login':
           return await authLogin(req);
-        case "signup":
+        case 'signup':
           return await authSignup(req);
-        case "logout":
-          const sessionId = (await req.formData()).get("sessionId")?.valueOf() as string | undefined
-          if(!sessionId){
-            return error("no session id is provided", 400)
+        case 'logout':
+          const sessionId = (await req.formData())
+            .get('sessionId')
+            ?.valueOf() as string | undefined;
+          if (!sessionId) {
+            return error('no session id is provided', 400);
           }
-          await db.delete(session).where(eq(session.sessionId, sessionId));
-          return new NextResponse(null, {status: 200})
+          try {
+            await db.delete(session).where(eq(session.sessionId, sessionId));
+          } catch (err) {
+            console.log('LOG OUT ERR: ', err);
+          }
+          return new NextResponse(null, { status: 200 });
         default:
           return NextResponse.json({
-            message: "Invalid request",
+            message: 'Invalid request',
           });
       }
     }
 
-    if (req.method === "GET") {
+    if (req.method === 'GET') {
       switch (type) {
-        case "login":
-          return NextResponse.redirect(new URL("/login", req.nextUrl));
-        case "user":
+        case 'login':
+          return NextResponse.redirect(new URL('/login', req.nextUrl));
+        case 'user':
           const searchParams = new URL(req.url).searchParams;
-          const sessionId = searchParams.get("sessionId");
+          const sessionId = searchParams.get('sessionId');
 
           if (!sessionId) {
-            return error("please provide userid and session id", 400);
+            return error('please provide userid and session id', 400);
           }
 
           const u_session = (
@@ -57,12 +63,12 @@ export default async function handleAuth(
           ).at(0);
 
           if (!u_session?.userId) {
-            return error("invalid session id", 404);
+            return error('invalid session id', 404);
           }
 
           if (u_session?.expiresAt < new Date().getTime() / 1000) {
             await db.delete(session).where(eq(session.sessionId, sessionId));
-            return error("Session is expired", 400);
+            return error('Session is expired', 400);
           }
 
           const u_user = (
@@ -76,7 +82,7 @@ export default async function handleAuth(
 
         default:
           return NextResponse.json({
-            message: "trying to get",
+            message: 'trying to get',
           });
       }
     }
@@ -89,14 +95,14 @@ export default async function handleAuth(
 async function authLogin(req: NextRequest) {
   try {
     let fd = await req.formData();
-    const email = fd.get("email")?.toString();
-    const password = fd.get("password")?.toString();
+    const email = fd.get('email')?.toString();
+    const password = fd.get('password')?.toString();
 
     if (!email || !password) {
-      throw new Error("Email or Password missing");
+      throw new Error('Email or Password missing');
     }
-    if (email.trim() === "" || password.trim() === "") {
-      throw new Error("Email or Password empty");
+    if (email.trim() === '' || password.trim() === '') {
+      throw new Error('Email or Password empty');
     }
 
     const user = await db.query.user.findFirst({
@@ -104,11 +110,11 @@ async function authLogin(req: NextRequest) {
     });
 
     if (!user) {
-      throw new Error("Email or Password is invalid.");
+      throw new Error('Email or Password is invalid.');
     }
 
     if (user.password !== password) {
-      throw new Error("Email or Password is invalid.");
+      throw new Error('Email or Password is invalid.');
     }
 
     const sessionId = await createSession(user.id);
@@ -126,10 +132,10 @@ async function authLogin(req: NextRequest) {
     //     },
     //   }
     // );
-    return NextResponse.redirect(new URL("/", req.nextUrl), {
+    return NextResponse.redirect(new URL('/', req.nextUrl), {
       headers: {
-        "Set-Cookie": `sessionId=${sessionId}; Path=/;`,
-        "Content-Type": "application/json",
+        'Set-Cookie': `sessionId=${sessionId}; Path=/;`,
+        'Content-Type': 'application/json',
       },
     });
   } catch (err) {
@@ -145,14 +151,14 @@ async function authSignup(req: NextRequest) {
     // };
 
     let fd = await req.formData();
-    const email = fd.get("email")?.toString();
-    const password = fd.get("password")?.toString();
+    const email = fd.get('email')?.toString();
+    const password = fd.get('password')?.toString();
 
     if (!email || !password) {
-      throw new Error("Email or Password missing");
+      throw new Error('Email or Password missing');
     }
-    if (email.trim() === "" || password.trim() === "") {
-      throw new Error("Email or Password empty");
+    if (email.trim() === '' || password.trim() === '') {
+      throw new Error('Email or Password empty');
     }
 
     const isUserExists = await db.query.user.findFirst({
@@ -160,7 +166,7 @@ async function authSignup(req: NextRequest) {
     });
 
     if (isUserExists) {
-      throw new Error("Email already exists.");
+      throw new Error('Email already exists.');
     }
 
     const result = await db
@@ -172,7 +178,7 @@ async function authSignup(req: NextRequest) {
       .returning({ id: user.id });
 
     if (result.length === 0) {
-      throw new Error("Failed to create account");
+      throw new Error('Failed to create account');
     }
 
     const created_user = result[0];
@@ -181,13 +187,13 @@ async function authSignup(req: NextRequest) {
 
     return new Response(
       JSON.stringify({
-        message: "Successfully account created.",
+        message: 'Successfully account created.',
       }),
       {
         status: 201,
         headers: {
-          "Set-Cookie": `sessionId=${sessionId}; Path=/;`,
-          "Content-Type": "application/json",
+          'Set-Cookie': `sessionId=${sessionId}; Path=/;`,
+          'Content-Type': 'application/json',
         },
       }
     );

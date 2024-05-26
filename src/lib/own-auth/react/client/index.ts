@@ -9,7 +9,10 @@ export const signOut = () => {
     const fd = new FormData();
     fd.append("sessionId", sessionId)
     fetch("/api/auth/logout", {
-      body:fd, 
+      body:fd,
+      method:"POST"
+    }).then(() => {
+      console.log("LOGGED OUT")
     }).catch(err => {
       console.log(`SIGN OUT ERR: ${err}`)
     }).finally(() => {
