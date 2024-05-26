@@ -1,7 +1,9 @@
-import { USER } from "@/lib/db/schema";
+import { USER, session, user } from "@/lib/db/schema";
 import { cookies } from "next/headers";
 import React, { PropsWithChildren } from "react";
-import UserContextProvider from "../client/UserContext";
+import UserContextProvider from "../client/internal/UserContext";
+import { db } from "@/lib/db";
+import { eq } from "drizzle-orm";
 
 type Props = PropsWithChildren<{}>;
 
@@ -16,14 +18,27 @@ async function UserProvider({ children }: Props) {
 }
 
 async function getUser(sesId: string) {
-  const userResponse = await fetch(
-    `http:/localhost:3000/api/auth/user?sessionId=${sesId}`
-  );
-  if (userResponse.ok) {
-    return ((await userResponse.json()) as { user?: USER })?.user ?? null;
-  } else {
+  const u_session = (
+    await db
+      .select()
+      .from(session)
+      .where(eq(session.sessionId, sesId))
+  ).at(0);
+
+  if (!u_session?.userId) {
     return null;
   }
+
+  if (u_session?.expiresAt < new Date().getTime() / 1000) {
+    await db.delete(session).where(eq(session.sessionId, sesId));
+    return null;
+  }
+
+  const u_user = (
+    await db.select().from(user).where(eq(user.id, u_session.userId))
+  ).at(0);
+
+  return u_user ?? null
 }
 
 export default UserProvider;

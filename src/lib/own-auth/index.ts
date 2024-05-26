@@ -23,6 +23,13 @@ export default async function handleAuth(
           return await authLogin(req);
         case "signup":
           return await authSignup(req);
+        case "logout":
+          const sessionId = (await req.formData()).get("sessionId")?.valueOf() as string | undefined
+          if(!sessionId){
+            return error("no session id is provided", 400)
+          }
+          await db.delete(session).where(eq(session.sessionId, sessionId));
+          return new NextResponse(null, {status: 200})
         default:
           return NextResponse.json({
             message: "Invalid request",
