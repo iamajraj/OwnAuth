@@ -5,7 +5,7 @@ import React, { useState } from "react";
 
 type Props = {};
 
-function Login({}: Props) {
+function Register({}: Props) {
   const [passwordVisible, setPasswordVisible] = useState(false);
 
   const togglePasswordVisibility = () => {
@@ -16,9 +16,9 @@ function Login({}: Props) {
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
         <h2 className="text-3xl font-bold mb-6 text-center text-black">
-          Login
+          Register
         </h2>
-        <form action="/api/auth/login" method="POST" className="space-y-6">
+        <form action="/api/auth/signup" method="POST" className="space-y-6">
           <div>
             <label
               htmlFor="email"
@@ -100,14 +100,14 @@ function Login({}: Props) {
               type="submit"
               className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-black hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black transition ease-in-out duration-150"
             >
-              Sign in
+              Sign up
             </button>
           </div>
         </form>
         <p className="mt-2 text-sm">
-          Don't have an account?{" "}
-          <Link className="underline" href="/register">
-            Register
+          Already have an account?{" "}
+          <Link className="underline" href="/login">
+            Login
           </Link>
         </p>
       </div>
@@ -115,4 +115,4 @@ function Login({}: Props) {
   );
 }
 
-export default Login;
+export default Register;
