@@ -4,11 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "drizzle-kit push & next build",
+    "build": "drizzle-kit push && next build",
     "start": "next start",
     "lint": "next lint",
     "db:studio": "drizzle-kit studio",
-    "db:push":"drizzle-kit push"
+    "db:push": "drizzle-kit push"
   },
   "dependencies": {
     "better-sqlite3": "^10.0.0",
