@@ -105,7 +105,7 @@ function Login({}: Props) {
           </div>
         </form>
         <p className="mt-2 text-sm">
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <Link className="underline" href="/register">
             Register
           </Link>
