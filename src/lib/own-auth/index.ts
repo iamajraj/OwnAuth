@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "../db";
 import { session, user } from "../db/schema";
 import { eq } from "drizzle-orm";
+import { compare, genSalt, hash } from "bcryptjs";
 
 // 1 day = 60 * 60 * 24
 const SESSION_EXPIRES_IN_SECONDS = 60 * 60 * 24;
@@ -113,7 +114,7 @@ async function authLogin(req: NextRequest) {
       throw new Error("Email or Password is invalid.");
     }
 
-    if (user.password !== password) {
+    if (!(await compare(password, user.password))) {
       throw new Error("Email or Password is invalid.");
     }
 
@@ -169,11 +170,14 @@ async function authSignup(req: NextRequest) {
       throw new Error("Email already exists.");
     }
 
+    const salt = await genSalt(10);
+    const hashedPassword = await hash(password, salt);
+
     const result = await db
       .insert(user)
       .values({
         email: email,
-        password: password,
+        password: hashedPassword,
       })
       .returning({ id: user.id });
 
